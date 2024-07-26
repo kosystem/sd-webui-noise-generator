@@ -120,6 +120,12 @@ class NoiseGenerator:
             'seed': int(self.seed)
         }
 
+        # NumPy配列をリストに変換
+        for key, value in params.items():
+            if isinstance(value, np.ndarray):
+                params[key] = value.tolist()
+            elif isinstance(value, np.generic):
+                params[key] = value.item()
         json_params = json.dumps(params)
 
         # EXIFにJSONを埋め込む
