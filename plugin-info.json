@@ -1,0 +1,7 @@
+{
+    "name": "Noise Generator for ControlNet",
+    "version": "1.0",
+    "description": "Generate custom noise images for use with ControlNet in Stable Diffusion",
+    "author": "Your Name",
+    "repository": "https://github.com/kosystem/sd-webui-noise-generator"
+}
