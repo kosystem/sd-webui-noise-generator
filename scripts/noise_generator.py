@@ -19,7 +19,7 @@ class NoiseGenerator:
     def reset_seed(self):
         self.seed = random.randint(0, 100000)
 
-    def generate_noise(self, width, height, brightness, color, noise_type, noise_scale, octaves, persistence, contrast, color_mode, color1, color2, color3, color4, gradient_direction, gradient_angle, num_cells):
+    def generate_noise(self, width, height, brightness, color, noise_type, noise_scale, octaves, persistence, contrast, color_mode, color1, color2, color3, color4, gradient_angle, num_cells):
         self.reset_seed()
 
         # 色の値をリストから16進数文字列に変換
@@ -63,24 +63,24 @@ class NoiseGenerator:
                 color3 = np.array(self.hex_to_rgb(color3)) / 255.0
                 color4 = np.array(self.hex_to_rgb(color4)) / 255.0
                 
-                if gradient_direction == "Horizontal":
-                    x = np.linspace(0, 1, width)
-                    y = np.linspace(0, 1, height)
-                    x, y = np.meshgrid(x, y)
-                elif gradient_direction == "Vertical":
-                    x = np.linspace(0, 1, height)
-                    y = np.linspace(0, 1, width)
-                    y, x = np.meshgrid(y, x)
-                    x = x.T
-                    y = y.T
-                elif gradient_direction == "Diagonal":
-                    angle_rad = np.radians(gradient_angle)
-                    x = np.linspace(0, 1, width)
-                    y = np.linspace(0, 1, height)
-                    x, y = np.meshgrid(x, y)
-                    rotated = x * np.cos(angle_rad) + y * np.sin(angle_rad)
-                    rotated = (rotated - rotated.min()) / (rotated.max() - rotated.min())
-                    x = y = rotated
+                # if gradient_direction == "Horizontal":
+                #     x = np.linspace(0, 1, width)
+                #     y = np.linspace(0, 1, height)
+                #     x, y = np.meshgrid(x, y)
+                # elif gradient_direction == "Vertical":
+                #     x = np.linspace(0, 1, height)
+                #     y = np.linspace(0, 1, width)
+                #     y, x = np.meshgrid(y, x)
+                #     x = x.T
+                #     y = y.T
+                # elif gradient_direction == "Diagonal":
+                angle_rad = np.radians(gradient_angle)
+                x = np.linspace(0, 1, width)
+                y = np.linspace(0, 1, height)
+                x, y = np.meshgrid(x, y)
+                rotated = x * np.cos(angle_rad) + y * np.sin(angle_rad)
+                rotated = (rotated - rotated.min()) / (rotated.max() - rotated.min())
+                x = y = rotated
 
                 top = color1[None, None, :] * (1 - x[:, :, None]) + color2[None, None, :] * x[:, :, None]
                 bottom = color3[None, None, :] * (1 - x[:, :, None]) + color4[None, None, :] * x[:, :, None]
@@ -114,7 +114,6 @@ class NoiseGenerator:
             'color2': color2,
             'color3': color3,
             'color4': color4,
-            'gradient_direction': gradient_direction,
             'gradient_angle': float(gradient_angle),
             'num_cells': int(num_cells),
             'seed': int(self.seed)
@@ -215,11 +214,10 @@ def on_ui_tabs():
                     color3 = gr.ColorPicker(label="Color 3", value="#00FF00")
                     color4 = gr.ColorPicker(label="Color 4", value="#FFFF00")
                 with gr.Row(visible=False) as gradient_controls:
-                    gradient_direction = gr.Dropdown(["Horizontal", "Vertical", "Diagonal"], label="Gradient Direction", value="Horizontal")
                     gradient_angle = gr.Slider(minimum=0, maximum=360, step=1, label="Gradient Angle (Diagonal only)", value=45)
                 num_cells = gr.Slider(minimum=10, maximum=500, step=10, label="Number of Cells (Voronoi only)", value=50)
-                randomize_colors_button = gr.Button("Randomize Colors")
                 generate_button = gr.Button("Generate Noise")
+                randomize_colors_button = gr.Button("Randomize Colors")
                 load_image_button = gr.UploadButton("Load Image", file_types=["image"])
             with gr.Column():
                 result_image = gr.Image(label="Generated Noise")
@@ -250,7 +248,7 @@ def on_ui_tabs():
 
         generate_button.click(
             fn=noise_generator.generate_noise,
-            inputs=[width, height, brightness, color, noise_type, noise_scale, octaves, persistence, contrast, color_mode, color1, color2, color3, color4, gradient_direction, gradient_angle, num_cells],
+            inputs=[width, height, brightness, color, noise_type, noise_scale, octaves, persistence, contrast, color_mode, color1, color2, color3, color4, gradient_angle, num_cells],
             outputs=[result_image],
         )
 
@@ -273,7 +271,6 @@ def on_ui_tabs():
                         gr.update(value=params['color2']),
                         gr.update(value=params['color3']),
                         gr.update(value=params['color4']),
-                        gr.update(value=params['gradient_direction']),
                         gr.update(value=params['gradient_angle']),
                         gr.update(value=params['num_cells']),
                     ]
@@ -282,7 +279,7 @@ def on_ui_tabs():
         load_image_button.upload(
             fn=load_image,
             inputs=[load_image_button],
-            outputs=[width, height, brightness, color, noise_type, noise_scale, octaves, persistence, contrast, color_mode, color1, color2, color3, color4, gradient_direction, gradient_angle, num_cells],
+            outputs=[width, height, brightness, color, noise_type, noise_scale, octaves, persistence, contrast, color_mode, color1, color2, color3, color4, gradient_angle, num_cells],
         )
 
     return [(noise_generator_tab, "Noise Generator", "noise_generator_tab")]
