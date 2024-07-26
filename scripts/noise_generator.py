@@ -22,6 +22,13 @@ class NoiseGenerator:
     def generate_noise(self, width, height, brightness, color, noise_type, noise_scale, octaves, persistence, contrast, color_mode, color1, color2, color3, color4, gradient_direction, gradient_angle, num_cells):
         self.reset_seed()
 
+        # 色の値をリストから16進数文字列に変換
+        color = self.ensure_hex_color(color)
+        color1 = self.ensure_hex_color(color1)
+        color2 = self.ensure_hex_color(color2)
+        color3 = self.ensure_hex_color(color3)
+        color4 = self.ensure_hex_color(color4)
+
         if noise_type == "White":
             noise_array = np.random.rand(height, width, 3)
         elif noise_type == "Simplex":
@@ -93,25 +100,26 @@ class NoiseGenerator:
 
         # パラメータをJSONに変換
         params = {
-            'width': width,
-            'height': height,
-            'brightness': brightness,
+            'width': int(width),
+            'height': int(height),
+            'brightness': float(brightness),
             'color': color,
             'noise_type': noise_type,
-            'noise_scale': noise_scale,
-            'octaves': octaves,
-            'persistence': persistence,
-            'contrast': contrast,
+            'noise_scale': float(noise_scale),
+            'octaves': int(octaves),
+            'persistence': float(persistence),
+            'contrast': float(contrast),
             'color_mode': color_mode,
             'color1': color1,
             'color2': color2,
             'color3': color3,
             'color4': color4,
             'gradient_direction': gradient_direction,
-            'gradient_angle': gradient_angle,
-            'num_cells': num_cells,
-            'seed': self.seed
+            'gradient_angle': float(gradient_angle),
+            'num_cells': int(num_cells),
+            'seed': int(self.seed)
         }
+
         json_params = json.dumps(params)
 
         # EXIFにJSONを埋め込む
@@ -135,11 +143,49 @@ class NoiseGenerator:
                 if exif_data:
                     image_description = exif_data.get(piexif.ImageIFD.ImageDescription)
                     if image_description:
-                        params = json.loads(image_description.decode('utf-8'))
+                        if isinstance(image_description, bytes):
+                            image_description = image_description.decode('utf-8')
+                        params = json.loads(image_description)
+                        
+                        print("Loaded params:", params)  # デバッグ情報
+
+                        # 色の値を確実に16進数文字列として扱う
+                        for color_key in ['color', 'color1', 'color2', 'color3', 'color4']:
+                            if color_key in params and params[color_key] is not None:
+                                original_value = params[color_key]
+                                params[color_key] = self.ensure_hex_color(params[color_key])
+                                print(f"Color conversion for {color_key}: {original_value} -> {params[color_key]}")  # デバッグ情報
+                        
                         return params
         except Exception as e:
             print(f"Error loading image parameters: {e}")
+            print(f"Image path: {image_path}")
+            if 'image_description' in locals():
+                print(f"Image description type: {type(image_description)}")
+                print(f"Image description content: {image_description}")
         return None
+
+    def ensure_hex_color(self, color):
+        print(f"ensure_hex_color input: {color}")  # デバッグ情報
+        if isinstance(color, list):
+            # リストの場合、RGBの値を16進数文字列に変換
+            if all(isinstance(c, float) and 0 <= c <= 1 for c in color):
+                # 浮動小数点数の場合（0-1の範囲）
+                result = f"#{int(color[0]*255):02x}{int(color[1]*255):02x}{int(color[2]*255):02x}"
+            else:
+                # 整数の場合（0-255の範囲）
+                result = f"#{int(color[0]):02x}{int(color[1]):02x}{int(color[2]):02x}"
+        elif isinstance(color, str):
+            # 文字列の場合、'#'で始まっていることを確認
+            result = color if color.startswith('#') else f"#{color}"
+        elif isinstance(color, int):
+            # 整数の場合、16進数文字列に変換
+            result = f"#{color:06x}"
+        else:
+            # その他の場合、デフォルト値を返す
+            result = "#000000"
+        print(f"ensure_hex_color output: {result}")  # デバッグ情報
+        return result
 
 noise_generator = NoiseGenerator()
 
