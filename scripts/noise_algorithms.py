@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.spatial import Voronoi
 import colorsys
+import cv2
 
 
 def generate_simplex_noise(width, height, scale, octaves, persistence, seed):
@@ -124,24 +125,31 @@ def generate_colorful_voronoi(width, height, num_cells, seed):
     # ボロノイ図を生成
     vor = Voronoi(points)
     
-    # 各セルに色を割り当て
-    colors = [colorsys.hsv_to_rgb(np.random.rand(), 0.8, 1.0) for _ in range(len(vor.points))]
+    # 色を生成
+    colors = [tuple(int(x * 255) for x in colorsys.hsv_to_rgb(np.random.rand(), 0.8, 1.0)) for _ in range(len(vor.points))]
     
     # 画像を生成
-    image = np.zeros((height, width, 3))
-    xx, yy = np.meshgrid(range(width), range(height))
-    for i, region in enumerate(vor.regions):
-        if not -1 in region and len(region) > 0:
-            polygon = [vor.vertices[i] for i in region]
-            mask = np.zeros((height, width), dtype=bool)
-            for j in range(len(polygon)):
-                k = (j + 1) % len(polygon)
-                y, x = polygon[j]
-                yy, xx = polygon[k]
-                mask |= (
-                    (yy > y) ^ (xx > x) &
-                    ((xx - x) * (yy - y) - (yy - y) * (xx - x) > 0)
-                )
-            image[mask] = colors[i]
+    image = np.zeros((height, width, 3), dtype=np.uint8)
     
+    # 各領域を塗りつぶす
+    for i, region in enumerate(vor.regions):
+        if not -1 in region:
+            polygon = [vor.vertices[v] for v in region]
+            polygon = np.array(polygon, dtype=np.int32)
+            cv2.fillPoly(image, [polygon], colors[i % len(colors)])
+    
+    # 境界を処理
+    center = vor.points.mean(axis=0)
+    for pointidx, simplex in zip(vor.ridge_points, vor.ridge_vertices):
+        simplex = np.asarray(simplex)
+        if -1 in simplex:
+            i = simplex[simplex >= 0][0]  # 有効な頂点のインデックス
+            t = vor.points[pointidx[1]] - vor.points[pointidx[0]]  # 接線
+            t = t / np.linalg.norm(t)
+            n = np.array([-t[1], t[0]])  # 法線
+            midpoint = vor.points[pointidx].mean(axis=0)
+            far_point = vor.vertices[i] + np.sign(np.dot(midpoint - center, n)) * n * max(width, height)
+            pts = np.vstack((vor.vertices[i], far_point)).astype(int)
+            cv2.fillPoly(image, [pts], colors[pointidx[0]])
+
     return image
